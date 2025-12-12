@@ -24,7 +24,7 @@ A lightweight, bash-based pipeline for running AI agents on your local hardware.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourusername/local-llm-agents.git
+git clone https://github.com/Platano78/local-llm-agents.git
 cd local-llm-agents
 
 # 2. Run the install script
@@ -33,9 +33,39 @@ cd local-llm-agents
 # 3. Start your local LLM server (example with vLLM)
 vllm serve your-model --port 8081
 
-# 4. Run a task
+# 4. Run a task (two options)
+
+# Option A: Direct script execution
 ./scripts/orchestrate.sh "Create a Python function to check if a number is prime" 2
+
+# Option B: Claude Code slash command (after install)
+# In Claude Code terminal, type:
+/local-agents Create a Python function to check if a number is prime
 ```
+
+## Claude Code Integration
+
+After running `./install.sh`, the `/local-agents` slash command is available in Claude Code:
+
+```bash
+# In Claude Code:
+/local-agents "Create a REST API with CRUD operations"
+/local-agents "Write unit tests for the UserService class"
+/local-agents "Refactor this module to use async/await"
+```
+
+The slash command:
+- Installs scripts to `~/.claude/scripts/local-agents/`
+- Adds the `/local-agents` command to `~/.claude/commands/`
+- Copies starter agents to `~/.claude/agents/`
+
+### What the Slash Command Provides
+
+When you use `/local-agents <task>`, Claude Code:
+1. Runs the full orchestration pipeline
+2. Shows progress through each stage
+3. Displays the synthesized results
+4. Can be used for manual step-by-step execution if needed
 
 ## Architecture
 
