@@ -1,0 +1,24 @@
+# Environment and config
+.env
+*.local
+
+# Outputs
+/tmp/
+outputs/
+*.log
+*.jsonl
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Backup files
+*.backup.*
+*.bak
