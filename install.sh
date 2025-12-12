@@ -1,6 +1,6 @@
 #!/bin/bash
 # Local LLM Agents - Installation Script
-# Sets up the environment and validates dependencies
+# Sets up scripts, slash command, and validates dependencies
 
 set -e
 
@@ -47,34 +47,61 @@ fi
 echo ""
 echo "Setting up directories..."
 
-# Ensure scripts are executable
-chmod +x "$SCRIPT_DIR/scripts/"*.sh
-echo -e "  ${GREEN}✓${NC} Scripts made executable"
+# Create Claude Code directories
+CLAUDE_SCRIPTS="$HOME/.claude/scripts/local-agents"
+CLAUDE_COMMANDS="$HOME/.claude/commands"
+CLAUDE_AGENTS="$HOME/.claude/agents"
 
-# Set default config
-CONFIG_FILE="$SCRIPT_DIR/.env"
+mkdir -p "$CLAUDE_SCRIPTS"
+mkdir -p "$CLAUDE_COMMANDS"
+mkdir -p "$CLAUDE_AGENTS"
+echo -e "  ${GREEN}✓${NC} Claude Code directories created"
+
+# Copy scripts
+cp "$SCRIPT_DIR/scripts/"*.sh "$CLAUDE_SCRIPTS/"
+chmod +x "$CLAUDE_SCRIPTS/"*.sh
+echo -e "  ${GREEN}✓${NC} Scripts installed to ~/.claude/scripts/local-agents/"
+
+# Copy prompts
+mkdir -p "$CLAUDE_SCRIPTS/prompts"
+cp "$SCRIPT_DIR/prompts/"*.txt "$CLAUDE_SCRIPTS/prompts/"
+echo -e "  ${GREEN}✓${NC} Prompts installed"
+
+# Copy agents (only if not already present)
+for agent in "$SCRIPT_DIR/agents/"*.md; do
+    agent_name=$(basename "$agent")
+    if [ ! -f "$CLAUDE_AGENTS/$agent_name" ]; then
+        cp "$agent" "$CLAUDE_AGENTS/"
+        echo -e "  ${GREEN}✓${NC} Agent installed: $agent_name"
+    else
+        echo -e "  ${YELLOW}→${NC} Agent exists, skipping: $agent_name"
+    fi
+done
+
+# Install slash command
+cp "$SCRIPT_DIR/commands/local-agents.md" "$CLAUDE_COMMANDS/"
+echo -e "  ${GREEN}✓${NC} Slash command installed: /local-agents"
+
+# Create config file if not exists
+CONFIG_FILE="$CLAUDE_SCRIPTS/.env"
 if [ ! -f "$CONFIG_FILE" ]; then
     cat > "$CONFIG_FILE" << 'EOF'
 # Local LLM Agents Configuration
-# Copy this to .env and customize as needed
 
 # LLM Server Settings
 WORKER_PORT=8081
 ORCHESTRATOR_PORT=8085
 
 # Agent Pool Location
-AGENT_POOL="./agents"
+AGENT_POOL="$HOME/.claude/agents"
 
 # Timeouts (seconds)
 LLM_TIMEOUT=45
 TOTAL_TIMEOUT=180
-
-# Working directory for outputs (uses /tmp by default)
-# WORK_DIR=/path/to/custom/workdir
 EOF
-    echo -e "  ${GREEN}✓${NC} Default config created (.env)"
+    echo -e "  ${GREEN}✓${NC} Config created: ~/.claude/scripts/local-agents/.env"
 else
-    echo -e "  ${YELLOW}→${NC} Config file already exists (.env)"
+    echo -e "  ${YELLOW}→${NC} Config exists, skipping"
 fi
 
 echo ""
@@ -82,12 +109,14 @@ echo "========================================"
 echo -e "${GREEN}Installation complete!${NC}"
 echo "========================================"
 echo ""
+echo "Installed:"
+echo "  • Scripts: ~/.claude/scripts/local-agents/"
+echo "  • Command: /local-agents <task>"
+echo "  • Agents:  ~/.claude/agents/"
+echo ""
 echo "Next steps:"
 echo "  1. Start your local LLM server on port 8081"
-echo "  2. Run a test: ./scripts/orchestrate.sh \"Create a hello world function\" 2"
-echo ""
-echo "Configuration:"
-echo "  Edit .env to customize settings"
+echo "  2. In Claude Code, use: /local-agents \"Create a hello world function\""
 echo ""
 echo "Documentation:"
 echo "  See README.md for full usage instructions"
