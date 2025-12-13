@@ -22,6 +22,19 @@ LLM_TIMEOUT=45  # Per-request timeout
 TOTAL_TIMEOUT=180  # Total execution timeout (3 min)
 MAX_RETRIES=2  # Retries on empty response
 
+# Read model ID from status file based on port
+STATUS_FILE="${STATUS_FILE:-/tmp/local-agents-status.json}"
+MODEL_ID="worker"  # Default fallback
+if [ -f "$STATUS_FILE" ]; then
+    WORKER_PORT=$(jq -r '.worker.port // "8081"' "$STATUS_FILE" 2>/dev/null)
+    ORCH_PORT=$(jq -r '.orchestrator.port // "8083"' "$STATUS_FILE" 2>/dev/null)
+    if [ "$PORT" = "$ORCH_PORT" ]; then
+        MODEL_ID=$(jq -r '.orchestrator.model_id // "orchestrator"' "$STATUS_FILE" 2>/dev/null)
+    else
+        MODEL_ID=$(jq -r '.worker.model_id // "worker"' "$STATUS_FILE" 2>/dev/null)
+    fi
+fi
+
 # Output file
 OUTPUT_FILE="/tmp/agent_${AGENT}.txt"
 LOG_FILE="/tmp/agent_${AGENT}.log"
@@ -64,7 +77,7 @@ trap 'TIMEOUT_REACHED=1; log "TIMEOUT: Total execution time exceeded"; log_json 
 TIMEOUT_PID=$!
 
 # Load agent prompt (skip YAML frontmatter between --- markers)
-AGENT_FILE="${AGENT_POOL:-$LOCAL_AGENTS_HOME/agents}/${AGENT}.md"
+AGENT_FILE="$HOME/.claude/agents/${AGENT}.md"
 if [ ! -f "$AGENT_FILE" ]; then
     echo "ERROR: Agent file not found: $AGENT_FILE" | tee "$OUTPUT_FILE"
     exit 1
@@ -114,7 +127,7 @@ call_llm_with_retry() {
             -H "Content-Type: application/json" \
             -d @- <<EOF
 {
-    "model": "worker",
+    "model": "$MODEL_ID",
     "messages": $(cat "$MESSAGES_FILE"),
     "max_tokens": 4096,
     "temperature": 0.3,

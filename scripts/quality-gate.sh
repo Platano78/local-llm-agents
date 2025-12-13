@@ -27,18 +27,27 @@ fi
 # Load quality review prompt
 QUALITY_PROMPT=$(cat "$SCRIPT_DIR/prompts/quality-review.txt")
 
+# Read model IDs from status file (set by health-check.sh)
+STATUS_FILE="${STATUS_FILE:-/tmp/local-agents-status.json}"
+if [ -f "$STATUS_FILE" ]; then
+    WORKER_MODEL_ID=$(jq -r '.worker.model_id // ""' "$STATUS_FILE" 2>/dev/null)
+    ORCH_MODEL_ID=$(jq -r '.orchestrator.model_id // ""' "$STATUS_FILE" 2>/dev/null)
+fi
+
 # Determine which server to use (prefer orchestrator for review tasks)
 PORT=""
 MODEL=""
 
 if curl -s --max-time 2 "http://localhost:$ORCHESTRATOR_PORT/health" | grep -q "ok"; then
     PORT=$ORCHESTRATOR_PORT
-    MODEL="orchestrator"
+    MODEL="${ORCH_MODEL_ID:-orchestrator}"  # Use actual model ID or fallback
     MAX_TOKENS=1024
+    echo "[ROUTING] Using orchestrator for quality review (model: $MODEL)" >&2
 elif curl -s --max-time 2 "http://localhost:$WORKER_PORT/health" | grep -q "ok"; then
     PORT=$WORKER_PORT
-    MODEL="worker"
+    MODEL="${WORKER_MODEL_ID:-worker}"  # Use actual model ID or fallback
     MAX_TOKENS=2048
+    echo "[ROUTING] Using worker for quality review (model: $MODEL)" >&2
 else
     echo '{"error": "No LLM server available", "status": "fail", "overall_score": 0}' >&2
     exit 1

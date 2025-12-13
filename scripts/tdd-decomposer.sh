@@ -26,6 +26,13 @@ MAX_RETRIES=2  # Qwen3 recommendation: validation retries
 # Load decomposition prompt
 DECOMPOSE_PROMPT=$(cat "$SCRIPT_DIR/prompts/decompose.txt")
 
+# Read model IDs from status file (set by health-check.sh)
+STATUS_FILE="${STATUS_FILE:-/tmp/local-agents-status.json}"
+if [ -f "$STATUS_FILE" ]; then
+    WORKER_MODEL_ID=$(jq -r '.worker.model_id // ""' "$STATUS_FILE" 2>/dev/null)
+    ORCH_MODEL_ID=$(jq -r '.orchestrator.model_id // ""' "$STATUS_FILE" 2>/dev/null)
+fi
+
 # Determine which server to use based on routing decision
 PORT=""
 MODEL=""
@@ -34,28 +41,28 @@ if [ "$DECOMP_TARGET" = "orchestrator" ]; then
     # GPU orchestrator is fast enough for decomposition
     if curl -s --max-time 2 "http://localhost:$ORCHESTRATOR_PORT/health" 2>/dev/null | grep -q "ok"; then
         PORT=$ORCHESTRATOR_PORT
-        MODEL="orchestrator"
+        MODEL="${ORCH_MODEL_ID:-orchestrator}"  # Use actual model ID or fallback
         MAX_TOKENS=4096
-        echo "[ROUTING] Using GPU orchestrator for decomposition" >&2
+        echo "[ROUTING] Using GPU orchestrator for decomposition (model: $MODEL)" >&2
     else
         # Fallback to worker
         PORT=$WORKER_PORT
-        MODEL="worker"
+        MODEL="${WORKER_MODEL_ID:-worker}"  # Use actual model ID or fallback
         MAX_TOKENS=4096
-        echo "[ROUTING] GPU orchestrator unavailable, falling back to worker" >&2
+        echo "[ROUTING] GPU orchestrator unavailable, falling back to worker (model: $MODEL)" >&2
     fi
 else
     # CPU orchestrator is too slow - use GPU worker
     if curl -s --max-time 2 "http://localhost:$WORKER_PORT/health" 2>/dev/null | grep -q "ok"; then
         PORT=$WORKER_PORT
-        MODEL="worker"
+        MODEL="${WORKER_MODEL_ID:-worker}"  # Use actual model ID or fallback
         MAX_TOKENS=4096
-        echo "[ROUTING] Using GPU worker for decomposition (CPU orchestrator too slow)" >&2
+        echo "[ROUTING] Using GPU worker for decomposition (model: $MODEL)" >&2
     elif curl -s --max-time 2 "http://localhost:$ORCHESTRATOR_PORT/health" 2>/dev/null | grep -q "ok"; then
         PORT=$ORCHESTRATOR_PORT
-        MODEL="orchestrator"
+        MODEL="${ORCH_MODEL_ID:-orchestrator}"  # Use actual model ID or fallback
         MAX_TOKENS=1500
-        echo "[ROUTING] Worker unavailable, using orchestrator (may be slow)" >&2
+        echo "[ROUTING] Worker unavailable, using orchestrator (model: $MODEL)" >&2
     else
         echo '{"error": "No LLM server available", "parallel_groups": []}' >&2
         exit 1
