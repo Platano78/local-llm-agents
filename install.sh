@@ -48,24 +48,46 @@ echo ""
 echo "Setting up directories..."
 
 # Create Claude Code directories
-CLAUDE_SCRIPTS="$HOME/.claude/scripts/local-agents"
+CLAUDE_SCRIPTS_PARENT="$HOME/.claude/scripts"
+CLAUDE_SCRIPTS="$CLAUDE_SCRIPTS_PARENT/local-agents"
 CLAUDE_COMMANDS="$HOME/.claude/commands"
 CLAUDE_AGENTS="$HOME/.claude/agents"
 
-mkdir -p "$CLAUDE_SCRIPTS"
+mkdir -p "$CLAUDE_SCRIPTS_PARENT"
 mkdir -p "$CLAUDE_COMMANDS"
 mkdir -p "$CLAUDE_AGENTS"
 echo -e "  ${GREEN}✓${NC} Claude Code directories created"
 
-# Copy scripts
-cp "$SCRIPT_DIR/scripts/"*.sh "$CLAUDE_SCRIPTS/"
-chmod +x "$CLAUDE_SCRIPTS/"*.sh
-echo -e "  ${GREEN}✓${NC} Scripts installed to ~/.claude/scripts/local-agents/"
+# Install scripts via symlink (keeps repo and active scripts in sync)
+if [ -L "$CLAUDE_SCRIPTS" ]; then
+    # Already a symlink - update it
+    rm "$CLAUDE_SCRIPTS"
+    ln -s "$SCRIPT_DIR/scripts" "$CLAUDE_SCRIPTS"
+    echo -e "  ${GREEN}✓${NC} Scripts symlink updated"
+elif [ -d "$CLAUDE_SCRIPTS" ]; then
+    # Existing directory - ask user
+    echo -e "  ${YELLOW}!${NC} Existing scripts directory found at $CLAUDE_SCRIPTS"
+    read -p "    Replace with symlink to repo? (recommended) [y/N]: " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        rm -rf "$CLAUDE_SCRIPTS"
+        ln -s "$SCRIPT_DIR/scripts" "$CLAUDE_SCRIPTS"
+        echo -e "  ${GREEN}✓${NC} Scripts symlink created (replaced directory)"
+    else
+        # Fall back to copy mode
+        cp "$SCRIPT_DIR/scripts/"*.sh "$CLAUDE_SCRIPTS/"
+        chmod +x "$CLAUDE_SCRIPTS/"*.sh
+        mkdir -p "$CLAUDE_SCRIPTS/prompts"
+        cp "$SCRIPT_DIR/scripts/prompts/"*.txt "$CLAUDE_SCRIPTS/prompts/"
+        echo -e "  ${YELLOW}→${NC} Scripts copied (not symlinked)"
+    fi
+else
+    # Fresh install - create symlink
+    ln -s "$SCRIPT_DIR/scripts" "$CLAUDE_SCRIPTS"
+    echo -e "  ${GREEN}✓${NC} Scripts symlink created: ~/.claude/scripts/local-agents → repo/scripts"
+fi
 
-# Copy prompts
-mkdir -p "$CLAUDE_SCRIPTS/prompts"
-cp "$SCRIPT_DIR/prompts/"*.txt "$CLAUDE_SCRIPTS/prompts/"
-echo -e "  ${GREEN}✓${NC} Prompts installed"
+echo -e "  ${GREEN}✓${NC} Prompts included (in scripts/prompts/)"
 
 # Copy agents (only if not already present)
 for agent in "$SCRIPT_DIR/agents/"*.md; do
@@ -110,9 +132,14 @@ echo -e "${GREEN}Installation complete!${NC}"
 echo "========================================"
 echo ""
 echo "Installed:"
-echo "  • Scripts: ~/.claude/scripts/local-agents/"
+echo "  • Scripts: ~/.claude/scripts/local-agents/ (symlink to repo)"
 echo "  • Command: /local-agents <task>"
 echo "  • Agents:  ~/.claude/agents/"
+echo ""
+echo "Symlink benefits:"
+echo "  • Edit repo scripts → changes apply immediately"
+echo "  • Git tracks all modifications automatically"
+echo "  • No manual syncing needed"
 echo ""
 echo "Next steps:"
 echo "  1. Start your local LLM server on port 8081"
