@@ -12,6 +12,7 @@ A lightweight, bash-based pipeline for running AI agents on your local hardware.
 - **Self-Improving**: Generates new agents on-demand when needed
 - **Quality Gates**: Automatic review and scoring of outputs
 - **Works with Any Local LLM**: vLLM, LM Studio, llama.cpp, Ollama
+- **Token-Efficient**: File mode for large specs saves 95%+ Claude tokens
 
 ## Requirements
 
@@ -58,6 +59,7 @@ The slash command:
 - Installs scripts to `~/.claude/scripts/local-agents/`
 - Adds the `/local-agents` command to `~/.claude/commands/`
 - Copies starter agents to `~/.claude/agents/`
+- Supports token-efficient file mode for large specifications
 
 ### What the Slash Command Provides
 
@@ -93,6 +95,39 @@ When you use `/local-agents <task>`, Claude Code:
 # Run with custom slot count
 ./scripts/orchestrate.sh "Your task description" 4
 ```
+
+### Token-Efficient File Mode
+
+For large task specifications (>5KB), use file mode to save Claude tokens:
+
+```bash
+# Write large spec to file
+cat > /tmp/task-spec.md << 'EOF'
+# My Complex Task
+[Large specification content here...]
+EOF
+
+# Pass file path instead of inline text
+./scripts/orchestrate.sh /tmp/task-spec.md 4
+
+# Cleanup after completion
+rm -f /tmp/task-spec.md
+```
+
+**How it works:**
+- `orchestrate.sh` auto-detects if the argument is a file path or inline text
+- File paths are read and processed; inline text works as before
+- Backward compatible - no breaking changes
+
+**Token savings:**
+
+| Spec Size | Inline Mode | File Mode | Savings |
+|-----------|-------------|-----------|--------|
+| 10KB | ~12K tokens | ~2K tokens | 83% |
+| 50KB | ~52K tokens | ~2.5K tokens | **95%** |
+| 100KB | ~102K tokens | ~3K tokens | **97%** |
+
+See [docs/TOKEN_EFFICIENCY.md](docs/TOKEN_EFFICIENCY.md) for detailed analysis.
 
 ### Environment Variables
 
