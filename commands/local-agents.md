@@ -12,11 +12,34 @@ allowed-tools: Bash(~/.claude/scripts/local-agents/*), Bash(curl:*), Bash(cat:*)
 
 ## Quick Start: Run the Pipeline
 
-For most tasks, just execute the orchestration pipeline:
+**TOKEN EFFICIENCY**: For large task specs (>5KB), use file mode to save 95%+ tokens:
+- Small tasks (<5KB): Pass inline
+- Large tasks (>5KB): Write to temp file, pass file path
+
+### Standard Execution
 
 ```bash
+# For tasks under 5KB - direct inline mode
 ~/.claude/scripts/local-agents/orchestrate.sh "$ARGUMENTS"
 ```
+
+### Token-Efficient File Mode (for large specs)
+
+If the task specification is large (>5KB), write it to a temp file first:
+
+```bash
+# For tasks over 5KB - file mode (saves 95%+ tokens!)
+SPEC_FILE="/tmp/local-agents-input-$.md"
+cat > "$SPEC_FILE" << 'SPEC_EOF'
+$ARGUMENTS
+SPEC_EOF
+~/.claude/scripts/local-agents/orchestrate.sh "$SPEC_FILE"
+rm -f "$SPEC_FILE"  # Cleanup
+```
+
+**Claude Decision Logic**:
+- IF `$ARGUMENTS` appears to be >5KB: Use file mode
+- ELSE: Use direct inline mode
 
 This runs the full pipeline:
 1. **Health Check** → Verify servers (8081/8085)

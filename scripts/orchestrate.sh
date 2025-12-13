@@ -13,8 +13,20 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TASK="$1"
+TASK_INPUT="$1"
 MAX_SLOTS="${2:-6}"
+
+# Smart detection: Is $1 a file path or raw text?
+# This enables token-efficient mode where Claude writes large specs to a file
+# instead of passing 50KB+ inline (saves 95%+ tokens on large tasks)
+if [[ -f "$TASK_INPUT" ]]; then
+    # File mode: read task from file
+    TASK=$(<"$TASK_INPUT")
+    echo -e "${GREEN}[INFO]${NC} Reading task from file: $TASK_INPUT" >&2
+else
+    # Inline mode: use argument directly (backward compatible)
+    TASK="$TASK_INPUT"
+fi
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 WORK_DIR="/tmp/local-agents-$TIMESTAMP"
 LOG_FILE="$WORK_DIR/pipeline.log"
@@ -183,7 +195,26 @@ log_step "Execution complete: $EXEC_SUCCESS succeeded, $EXEC_FAILED failed (stat
 log_step "Step 5/6: Quality Gate Review"
 
 QUALITY_FILE="$WORK_DIR/quality.json"
-"$SCRIPT_DIR/quality-gate.sh" "$RESULTS_FILE" > "$QUALITY_FILE" 2>&1
+
+# Check if quality review target is available
+if [ "$QUALITY_TARGET" = "none" ]; then
+    log_warn "No LLM server available for quality review"
+    log_warn "Claude fallback: Manual quality review required"
+    
+    # Create quality.json for manual review
+    jq -n \
+        --argjson results "$(cat "$RESULTS_FILE")" \
+        '{
+            status: "manual_review_required",
+            overall_score: 0,
+            message: "No local LLM server available. Quality review requires Claude Code manual inspection.",
+            claude_fallback: true,
+            execution_summary: $results
+        }' > "$QUALITY_FILE"
+else
+    # Use local LLM for quality review (capture only stdout, stderr to logs)
+    "$SCRIPT_DIR/quality-gate.sh" "$RESULTS_FILE" > "$QUALITY_FILE" 2>>"$LOG_FILE"
+fi
 
 # Check quality results
 QUALITY_STATUS=$(jq -r '.status // "unknown"' "$QUALITY_FILE")
