@@ -164,7 +164,7 @@ Agents are Markdown files in the `agents/` directory. Each agent has:
 |-------|--------|
 | `code-generator-agent` | Writes implementation code |
 | `test-writer-agent` | Creates unit tests |
-| `code-reviewer-agent` | Reviews code quality |
+| `code-reviewer-agent` | Reviews code quality + simplifies/refines code |
 | `refactor-agent` | Improves code structure |
 | `documentation-agent` | Writes documentation |
 
@@ -320,6 +320,28 @@ Contributions welcome! Please:
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+## Comparison to Other Orchestration Tools
+
+### Local-Agents vs MCP Orchestration
+
+**Local-Agents** is a bash-native orchestration framework focused on:
+- Pure bash implementation (no language-specific dependencies)
+- Direct LLM endpoint calls (OpenAI-compatible API)
+- Educational demonstration of orchestration patterns
+- Lightweight deployment (bash + curl + jq)
+
+**MCP-based orchestration** (like Claude Code's /workflow commands) provides:
+- Intelligent AI backend selection with fallback chains
+- Learning and performance tracking across sessions
+- Conversation context preservation
+- Token-efficient operations via wrapper libraries
+
+**When to use which**:
+- Use local-agents: Bash-only environments, learning orchestration, no MCP infrastructure
+- Use MCP orchestration: Production work requiring learning/tracking, Claude Code sessions
+
+Both approaches have value - choose based on your deployment context and requirements.
 
 ## Related Projects
 

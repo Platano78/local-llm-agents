@@ -7,7 +7,7 @@ JSON FORMAT:
 
 AGENTS (choose appropriate):
 - code-optimization-agent: Write code, implement features
-- code-review-automation-agent: Write tests, review code
+- code-review-automation-agent: Write tests, review code, simplify/refine code
 
 PHASES: RED (write failing test), GREEN (implement to pass), REFACTOR (improve)
 
