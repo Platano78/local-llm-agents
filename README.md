@@ -1,5 +1,7 @@
 # Local LLM Agents
 
+> **⚠️ Archived (April 2026)** — This project is no longer maintained. It remains public as a reference for bash-based local LLM orchestration patterns. Day-to-day work moved to MCP-based workflows (MKG, OmniCoder, Claude Code skills) which provide backend learning, fallback chains, and conversation context that a pure-bash pipeline can't match. Feel free to fork.
+
 **TDD-driven task orchestration for local LLMs**
 
 A lightweight, bash-based pipeline for running AI agents on your local hardware. No API keys required - just your GPU and any OpenAI-compatible LLM server.
